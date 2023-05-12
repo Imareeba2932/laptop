@@ -9,10 +9,18 @@ from database import User, Profile, Product
 from db_helper import *
 from validators import *
 from logger import log
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 from werkzeug.utils import secure_filename
 import os
 
 app = Flask(__name__)
+
+def load_data():
+    df = pd.read_csv('laptop_data.csv')
+    return df
+
 app.secret_key  = '()*(#@!@#)'
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -167,6 +175,34 @@ def predict_laptop_price():
                         cpu_brands=cpu_brands,
                         oses=oses,
                         gpu_brands=gpu_brands)
+
+@app.route('/graph')
+def graph():
+    df = load_data()
+    fig1 = px.area(df['Price'],title='Price',width=800,height=400,color_discrete_sequence=['#F63366'],template='plotly_dark')
+
+    fig2 = df['Company'].value_counts()
+    px.histogram(df,x='Company',title='Company',width=800,height=400,template='plotly_dark',color_discrete_sequence=['#F63366'])
+
+    fig3 = px.box(x=df['Company'],y=df['Price'],title='Price vs Company',width=800,height=400,color_discrete_sequence=['#FFC300'],template='plotly_dark')
+ 
+    fig4 = df['TypeName'].value_counts()
+    px.pie(df,names='TypeName',title='TypeName',width=800,height=400,template='plotly_dark',color_discrete_sequence=px.colors.sequential.RdBu)
+
+    fig5 = px.violin(x=df['TypeName'],y=df['Price'],title='Price vs TypeName',width=800,height=400,color_discrete_sequence=['#900C3F'],template='plotly_dark')
+
+    fig6 = px.box(df['Inches'])
+
+    fig7 = px.scatter(x=df['Inches'],y=df['Price'],title='Price vs Inches',width=800,height=400,color_discrete_sequence=['#FFC300'],template='plotly_dark')
+
+    return render_template('graph.html', 
+                           fig1=fig1.html(), 
+                           fig2=fig2.html(), 
+                           fig3=fig3.html(), 
+                           fig4=fig4.html(), 
+                           fig5=fig5.html(),
+                           fig6=fig6.html(),
+                           fig7=fig7.html())
                         
 if __name__ == '__main__':
   app.run(host='0.0.0.0', port=8000, debug=True)
