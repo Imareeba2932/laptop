@@ -196,13 +196,13 @@ def graph():
     fig7 = px.scatter(x=df['Inches'],y=df['Price'],title='Price vs Inches',width=800,height=400,color_discrete_sequence=['#FFC300'],template='plotly_dark')
 
     return render_template('graph.html', 
-                           fig1=fig1.html(), 
-                           fig2=fig2.html(), 
-                           fig3=fig3.html(), 
-                           fig4=fig4.html(), 
-                           fig5=fig5.html(),
-                           fig6=fig6.html(),
-                           fig7=fig7.html())
+                           fig1=fig1.to_html(), 
+                           fig2=fig2.to_html(), 
+                           fig3=fig3.to_html(), 
+                           fig4=fig4.to_html(), 
+                           fig5=fig5.to_html(),
+                           fig6=fig6.to_html(),
+                           fig7=fig7.to_html())
                         
 if __name__ == '__main__':
   app.run(host='0.0.0.0', port=8000, debug=True)
