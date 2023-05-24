@@ -94,6 +94,25 @@
                             {% endfor %}
                         </select>
                     </div>
+                    <div class="mb-3">
+                        <label for="gpu" class="form-label">GPU</label>
+                        <select class="form-select form-select-lg" name="gpu" id="gpu">
+                            <option selected disabled>Select GPU</option>
+                            {% for name in gpu_brands %}
+                            <option>{{name}}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="brand" class="form-label">Brand</label>
+                        <select class="form-select form-select-lg" name="brand" id="brand">
+                            <option selected disabled>Select Brand</option>
+                            {% for name in cpu_brands %}
+                            <option>{{name}}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
                     <div class="d-grid gap-2">
                         <button class="btn btn-dark">Predict Laptop Price</button>
                     </div>

@@ -5,22 +5,38 @@ It contains the routes and views for the application.
 
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from database import opendb, DB_URL
-from database import User, Profile, Product
+from database import User, Profile
 from db_helper import *
 from validators import *
 from logger import log
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import numpy as np
 from werkzeug.utils import secure_filename
 import os
+import joblib
 
-app = Flask(__name__)
 
 def load_data():
     df = pd.read_csv('laptop_data.csv')
     return df
 
+def create_inp_df(company, typename, ram, weight,touchscreen, ips, ppi, cpubrand, hdd, ssd, gpubrand,os):
+    df = pd.DataFrame(columns=['Company', 'TypeName', 'Ram', 'Weight', 'Touchscreen', 'Ips', 'ppi', 'Cpu brand', 'HDD', 'SSD', 'Gpu brand', 'os'])
+    df.loc[0] = [company, typename, ram, weight, touchscreen, ips, ppi, cpubrand, hdd, ssd, gpubrand, os]
+    return df
+
+def load_model(model_file):
+    loaded_model = joblib.load(model_file)
+    return loaded_model
+
+def predict_price(model,df):
+    predictions = model.predict(df)
+    return predictions
+
+
+app = Flask(__name__)
 app.secret_key  = '()*(#@!@#)'
 app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -160,15 +176,36 @@ def view_profile():
         return redirect(url_for('index'))
     
 @app.route('/predict', methods=['GET', 'POST'])
-def predict_laptop_price():
+def predict_laptop_price_form():
     companies = ['Apple', 'HP', 'Acer', 'Asus', 'Dell', 'Lenovo', 'Chuwi', 'MSI', 'Microsoft', 'Toshiba', 'Huawei', 'Xiaomi', 'Vero', 'Razer', 'Mediacom', 'Samsung', 'Google', 'Fujitsu', 'LG']
     types = ['Ultrabook', 'Notebook', 'Netbook', 'Gaming', '2 in 1 Convertible', 'Workstation']
     cpu_brands = ['Intel Core i5', 'Intel Core i7', 'AMD Processor', 'Intel Core i3', 'Other Intel Processor']
     oses = ['Mac', 'Others/No OS/Linux', 'Windows']
     gpu_brands = ['Intel', 'AMD', 'Nvidia']
     if request.method == 'POST':
-        # Get form data
-        pass
+        ram = request.form.get('ram')
+        hdd = request.form.get('hdd')
+        ssd = request.form.get('ssd')
+        ppi = request.form.get('ppi')
+        weight = request.form.get('weight')
+        ips = request.form.get('ips')
+        touchscreen = request.form.get('touchscreen')
+        os = request.form.get('os')
+        company = request.form.get('company')
+        laptop_type = request.form.get('typename')
+        brand = request.form.get('brand')
+        gpu = request.form.get('gpu')
+        try:
+            df = create_inp_df(company, laptop_type, ram, weight,touchscreen, ips, ppi, brand, hdd, ssd, gpu,os)
+            print(df)
+            model = load_model('laptop_price_prediction_model.pkl')
+            prediction = predict_price(model,df)
+            session['prediction'] = np.exp(prediction[0])
+            flash(f'Predicted price is {prediction[0]}', 'success')
+            return redirect('result')
+        except Exception as e:
+            flash(f'Error occured: {e}', 'danger')
+            return redirect('predict')
     return render_template('predict.html', 
                         companies=companies,
                         types=types,
@@ -176,18 +213,24 @@ def predict_laptop_price():
                         oses=oses,
                         gpu_brands=gpu_brands)
 
+@app.route('/result')
+def result():
+    if 'prediction' not in session:
+        return redirect('predict')
+    return render_template('result.html', price=session.get('prediction'))
+
 @app.route('/graph')
 def graph():
     df = load_data()
     fig1 = px.area(df['Price'],title='Price',width=800,height=400,color_discrete_sequence=['#F63366'],template='plotly_dark')
 
-    fig2 = df['Company'].value_counts()
-    px.histogram(df,x='Company',title='Company',width=800,height=400,template='plotly_dark',color_discrete_sequence=['#F63366'])
+    df['Company'].value_counts()
+    fig2 = px.histogram(df,x='Company',title='Company',width=800,height=400,template='plotly_dark',color_discrete_sequence=['#F63366'])
 
     fig3 = px.box(x=df['Company'],y=df['Price'],title='Price vs Company',width=800,height=400,color_discrete_sequence=['#FFC300'],template='plotly_dark')
  
-    fig4 = df['TypeName'].value_counts()
-    px.pie(df,names='TypeName',title='TypeName',width=800,height=400,template='plotly_dark',color_discrete_sequence=px.colors.sequential.RdBu)
+    df['TypeName'].value_counts()
+    fig4 = px.pie(df,names='TypeName',title='TypeName',width=800,height=400,template='plotly_dark',color_discrete_sequence=px.colors.sequential.RdBu)
 
     fig5 = px.violin(x=df['TypeName'],y=df['Price'],title='Price vs TypeName',width=800,height=400,color_discrete_sequence=['#900C3F'],template='plotly_dark')
 
